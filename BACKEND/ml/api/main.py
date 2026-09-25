@@ -6,33 +6,29 @@ import pandas as pd
 from pathlib import Path
 import os
 
-app = FastAPI(title="Vehicle Fraud Detection API", version="1.0.0")
+app = FastAPI(
+    title="Vehicle Fraud Detection API",
+    version="1.0.0"
+)
 
-# Configure CORS so frontend running on any port (5173, 5174, 3000, etc.) can connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://vehicle-insurance-fraud-ml-2.onrender.com",
-    ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
 MODEL_PATH = BASE_DIR / "model" / "vehicle_fraud_final_model.pkl"
 
 try:
     model = joblib.load(MODEL_PATH)
+
     print("Model loaded successfully from:", MODEL_PATH)
     print("MODEL TYPE:", type(model))
+
 except Exception as e:
     print("Error loading model:", e)
     model = None
@@ -86,10 +82,15 @@ def health():
 
 @app.post("/predict")
 def predict(data: VehicleData):
+
     if model is None:
-        raise HTTPException(status_code=500, detail="ML model is not loaded.")
+        raise HTTPException(
+            status_code=500,
+            detail="ML model is not loaded."
+        )
 
     try:
+
         input_data = pd.DataFrame([
             {
                 "age_of_driver": data.age_of_driver,
@@ -111,26 +112,52 @@ def predict(data: VehicleData):
                 "vehicle_price": data.vehicle_price,
                 "total_claim": data.total_claim,
                 "injury_claim": data.injury_claim,
-                "policy deductible": data.policy_deductible,
-                "annual premium": data.annual_premium,
-                "days open": data.days_open,
-                "form defects": data.form_defects
+                "policy_deductible": data.policy_deductible,
+                "annual_premium": data.annual_premium,
+                "days_open": data.days_open,
+                "form_defects": data.form_defects
             }
         ])
 
-        prediction = int(model.predict(input_data)[0])
-        result = "Fraud" if prediction == 1 else "Not Fraud"
+        prediction = int(
+            model.predict(input_data)[0]
+        )
 
-        fraud_probability = 100.0 if prediction == 1 else 0.0
+        result = (
+            "Fraud"
+            if prediction == 1
+            else "Not Fraud"
+        )
+
+        fraud_probability = (
+            100.0
+            if prediction == 1
+            else 0.0
+        )
+
         if hasattr(model, "predict_proba"):
+
             try:
+
                 probs = model.predict_proba(input_data)[0]
+
                 classes = list(model.classes_)
+
                 if 1 in classes:
+
                     fraud_idx = classes.index(1)
-                    fraud_probability = round(float(probs[fraud_idx]) * 100, 2)
+
+                    fraud_probability = round(
+                        float(probs[fraud_idx]) * 100,
+                        2
+                    )
+
             except Exception as pe:
-                print("Could not calculate probabilities:", pe)
+
+                print(
+                    "Could not calculate probabilities:",
+                    pe
+                )
 
         return {
             "prediction": prediction,
@@ -138,12 +165,34 @@ def predict(data: VehicleData):
             "probability": fraud_probability,
             "model_name": "Decision Tree"
         }
+
     except Exception as e:
-        print("Prediction execution error:", e)
-        raise HTTPException(status_code=500, detail=str(e))
+
+        print(
+            "Prediction execution error:",
+            e
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 
 if __name__ == "__main__":
+
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            8000
+        )
+    )
+
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=port,
+        reload=True
+    )
