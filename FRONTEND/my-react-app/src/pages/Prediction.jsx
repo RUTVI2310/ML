@@ -237,8 +237,7 @@ export default function Prediction() {
       form_defects: Number(formData.formDefects)
     };
 
-    const backendUrl = import.meta.env.VITE_API_URL || 'https://ml-zbi9.onrender.com/';
-
+const backendUrl = import.meta.env.VITE_API_URL || 'https://ml-zbi9.onrender.com';
     try {
       setLoadingStage('Evaluating claim data with Decision Tree ML model...');
       const response = await fetch(`${backendUrl}/predict`, {
